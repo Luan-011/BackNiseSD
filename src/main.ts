@@ -1,13 +1,15 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
-
+import { AppModule } from './app.module'; // O ponto é crucial!
+// src/main.ts
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors(); // Isso é essencial para o app falar com o backend
-  // app.useGlobalPipes(new ValidationPipe({
-  //   whitelist: true,
-  // }));
-  await app.listen(3000);
+  
+  // O uso de process.env.PORT é o padrão universal para nuvem (Render, Railway, Heroku)
+  const port = process.env.PORT || 3000;
+  
+  // '0.0.0.0' é necessário para que a nuvem consiga acessar o serviço
+  await app.listen(port, '0.0.0.0'); 
+  
+  console.log(`Servidor rodando na porta ${port}`);
 }
 bootstrap();

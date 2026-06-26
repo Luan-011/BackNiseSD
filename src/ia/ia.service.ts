@@ -1,13 +1,17 @@
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import { Injectable, Inject, forwardRef } from "@nestjs/common";
 import { DiarioService } from "../diario/diario.service";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 @Injectable()
 export class IaService {
-private genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-  constructor(private readonly diarioService: DiarioService) {}
+  private genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-async gerarResumoSemanal(idPaciente: string) {
+  constructor(
+    @Inject(forwardRef(() => DiarioService))
+    private readonly diarioService: DiarioService
+  ) {}
+
+  async gerarResumoSemanal(idPaciente: string) {
     try {
       // Estrutura otimizada para leitura rápida e engajamento do usuário
       const respostaFormatadaIA = {

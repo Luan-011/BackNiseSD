@@ -9,19 +9,25 @@ import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class AuthService {
-    constructor(private prisma: PrismaService, private jwt: JwtService, private config: ConfigService) {}
+    constructor(
+        private prisma: PrismaService, 
+        private jwt: JwtService, 
+        private config: ConfigService
+    ) {}
 
+    // A função que o seu Controller estava procurando
     async signup(dto: SignupDto) {
         const hash = await argon.hash(dto.password);
         try {
-            const paciente = await this.prisma.paciente.create({
+            const paciente = await (this.prisma.paciente as any).create({
                 data: {
                     email: dto.email,
-                    hash, 
+                    hash,
                     primeiroNome: dto.primeiroNome,
                     sobreNome: dto.sobreNome
-                }, 
+                }
             });
+
             return { token: await this.signToken(paciente.id, paciente.email) };
         } catch (error) {
             if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -32,16 +38,17 @@ export class AuthService {
     }
 
     async signin(dto: SigninDto) {
-        const paciente = await this.prisma.paciente.findUnique({
+        const paciente = await (this.prisma.paciente as any).findFirst({
             where: { email: dto.email },
         });
+        
         if (!paciente) throw new ForbiddenException('Email ou senha incorreto');
 
-        const compararSenha = await argon.verify(paciente.hash, dto.password);
-        if(!compararSenha) throw new ForbiddenException('Email ou senha incorreto');
+        const compararSenha = await argon.verify(paciente.hash as string, dto.password);
+        if (!compararSenha) throw new ForbiddenException('Email ou senha incorreto');
 
         return {
-            token: await this.signToken(paciente.id, paciente.email),
+            token: await this.signToken(paciente.id as string, paciente.email as string),
             id: paciente.id
         };
     }

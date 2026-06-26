@@ -1,11 +1,12 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { IaService } from './ia.service';
-import { IaController } from './ia.controller';
-import { DiarioModule } from '../diario/diario.module';
+import { DiarioModule } from '../diario/diario.module'; // Importe o DiarioModule
 
 @Module({
-  imports: [DiarioModule], // O IaModule consome o DiarioModule
-  controllers: [IaController],
+  imports: [
+    forwardRef(() => DiarioModule), // Importe com forwardRef
+  ],
   providers: [IaService],
+  exports: [IaService], // Exporte o serviço para o DiarioModule usar
 })
 export class IaModule {}

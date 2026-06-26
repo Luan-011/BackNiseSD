@@ -1,27 +1,31 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "postgresql"
-  url      = "postgresql://neondb_owner:npg_PJxz4Sf0seDh@ep-billowing-thunder-apg0dl64.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require"
-}
-
 model Paciente {
   id           String   @id @default(uuid())
-  email        String   @unique
   primeiroNome String
   sobreNome    String
-  hash         String   // Necessário para o erro de 'hash'
+  email        String   @unique
+  hash         String
   diarios      Diario[]
 }
 
 model Diario {
-id          String   @id @default(uuid())
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
   titulo      String
-  descricao   String
+  descricao   String   @db.Text
   conteudo    String
-  createdAt   DateTime @default(now()) // Necessário para o erro de 'createdAt'
+  data        DateTime
+  feedbackIA  String?
+  
+  // Apenas UMA definição de pacienteId e a relação
   pacienteId  String
   paciente    Paciente @relation(fields: [pacienteId], references: [id])
 }
