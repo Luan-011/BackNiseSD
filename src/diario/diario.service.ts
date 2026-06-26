@@ -20,17 +20,17 @@ export class DiarioService {
 async criarDiario(dados: any) {
   try {
     return await this.prisma.diario.create({
-      data: {
+      data: { // <-- Este 'data' é do Prisma (configuração)
         titulo: dados.titulo,
         descricao: dados.descricao,
         conteudo: dados.conteudo,
-        data: new Date(dados.data), // Colocamos o 'new Date' direto aqui
-        pacienteId: dados.idPaciente // Usamos a referência direta da chave estrangeira
+        dataRegistro: new Date(dados.data), // <-- Este 'dataRegistro' é sua coluna
+        pacienteId: dados.idPaciente
       }
     });
   } catch (error) {
-    console.error("Erro completo do Prisma:", error);
-    throw new Error("Erro ao criar entrada no diário.");
+    console.error("Erro:", error);
+    throw new Error("Erro ao criar.");
   }
 }
 }

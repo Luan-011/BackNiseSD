@@ -22,10 +22,9 @@ model Diario {
   titulo      String
   descricao   String   @db.Text
   conteudo    String
-  data        DateTime
+  dataRegistro DateTime // APENAS ESTE NOME
   feedbackIA  String?
   
-  // Apenas UMA definição de pacienteId e a relação
   pacienteId  String
   paciente    Paciente @relation(fields: [pacienteId], references: [id])
 }
