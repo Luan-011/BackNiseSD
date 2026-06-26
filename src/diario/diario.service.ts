@@ -8,7 +8,7 @@ export class DiarioService {
     private prisma: PrismaService,
     @Inject(forwardRef(() => IaService))
     private readonly iaService: IaService
-  ) {}
+  ) { }
 
   async getDiarios(idPaciente: string) {
     return await this.prisma.diario.findMany({
@@ -20,9 +20,11 @@ export class DiarioService {
       },
     });
   }
-async getDiasComRegistro(idPaciente: string, ano: string, mes: string) {
-    const dataInicio = new Date(`${ano}-${mes}-01T00:00:00Z`);
-    const dataFim = new Date(parseInt(ano), parseInt(mes), 0);
+  async getDiasComRegistro(idPaciente: string, ano: string, mes: string) {
+    // Ajuste: pegamos o primeiro dia do mês e o último dia do mês de forma segura
+    const mesNumero = parseInt(mes) - 1; // Meses no JS vão de 0 a 11
+    const dataInicio = new Date(parseInt(ano), mesNumero, 1);
+    const dataFim = new Date(parseInt(ano), mesNumero + 1, 0, 23, 59, 59);
 
     const diarios = await this.prisma.diario.findMany({
       where: {
@@ -37,10 +39,11 @@ async getDiasComRegistro(idPaciente: string, ano: string, mes: string) {
       },
     });
 
-    // Retorna apenas o dia (número) de cada registro
-    return diarios.map((d) => d.dataRegistro.getDate());
+    // Retorna um array único de dias para evitar duplicatas
+    const dias = diarios.map((d) => d.dataRegistro.getDate());
+    return [...new Set(dias)];
   }
-async criarDiario(dados: any) {
+  async criarDiario(dados: any) {
     return await this.prisma.diario.create({
       data: {
         titulo: dados.titulo,
