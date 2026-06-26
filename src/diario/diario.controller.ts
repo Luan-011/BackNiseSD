@@ -9,7 +9,12 @@ export class DiarioController {
   async criarDiario(@Body() criarDiarioDto: any) {
     return this.diarioService.criarDiario(criarDiarioDto);
   }
-
+// No seu DiarioController
+@Get("feedback/:data")
+async getFeedback(@Param('data') data: string) {
+  // O ID_PACIENTE precisaria ser passado via query ou token se não estiver na rota
+  return await this.diarioService.getFeedbackPorData("134fa6c0-4a7e-4dec-a29a-81081d00122e", data);
+}
   // Corrigido: usando @Param para capturar o ID da URL
   @Get("lista/:idPaciente")
   async getDiarios(@Param('idPaciente') idPaciente: string) {
