@@ -1,16 +1,13 @@
-import { Module, forwardRef } from '@nestjs/common';
+// src/diario/diario.module.ts
+import { Module } from '@nestjs/common';
 import { DiarioService } from './diario.service';
 import { DiarioController } from './diario.controller';
 import { PrismaModule } from '../prisma/prisma.module';
-import { IaModule } from '../ia/ia.module'; // Importe o IaModule
 
 @Module({
-  imports: [
-    PrismaModule,
-    forwardRef(() => IaModule), // Importe com forwardRef
-  ],
+  imports: [PrismaModule],
   controllers: [DiarioController],
   providers: [DiarioService],
-  exports: [DiarioService], // Exporte o serviço para o IaModule usar
+  exports: [DiarioService], // <--- ADICIONE ESTA LINHA
 })
 export class DiarioModule {}

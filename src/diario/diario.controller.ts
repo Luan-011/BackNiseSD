@@ -3,17 +3,16 @@ import { DiarioService } from "./diario.service";
 
 @Controller("diarios")
 export class DiarioController {
-  constructor(private diarioService: DiarioService) {}
+  constructor(private readonly diarioService: DiarioService) {} // Adicionei 'readonly' (boa prática)
 
-  // A rota será: POST /diarios
   @Post() 
   async criarDiario(@Body() criarDiarioDto: any) {
     return this.diarioService.criarDiario(criarDiarioDto);
   }
 
-  // A rota será: GET /diarios/:idPaciente
-  @Get(":idPaciente")
-  getDiarios(@Param("idPaciente") idPaciente: string) {
-    return this.diarioService.getDiarios(idPaciente); 
+  @Get("lista/:idPaciente")
+  async getDiarios(@Param("idPaciente") idPaciente: string) {
+    // Adicione o 'await' caso o método no service seja 'async'
+    return await this.diarioService.getDiarios(idPaciente); 
   }
 }
