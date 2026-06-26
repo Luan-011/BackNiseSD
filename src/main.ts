@@ -1,15 +1,12 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module'; // O ponto é crucial!
-// src/main.ts
+import { AppModule } from './app.module';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // O uso de process.env.PORT é o padrão universal para nuvem (Render, Railway, Heroku)
-  const port = process.env.PORT || 3000;
+  // ESSA LINHA É A QUE LIBERA O ACESSO PARA O SEU CELULAR
+  app.enableCors(); 
   
-  // '0.0.0.0' é necessário para que a nuvem consiga acessar o serviço
-  await app.listen(port, '0.0.0.0'); 
-  
-  console.log(`Servidor rodando na porta ${port}`);
+  await app.listen(process.env.PORT || 3000);
 }
 bootstrap();
