@@ -17,21 +17,15 @@ export class DiarioService {
     });
   }
 
-  async criarDiario(dados: any) {
+async criarDiario(dados: any) {
   try {
-    // 1. Extraímos a data e convertemos para o objeto Date do JS
-    const dataDoRegistro = new Date(dados.data);
-
-    // 2. Usamos o nome correto para o campo no banco (dataDoRegistro)
     return await this.prisma.diario.create({
       data: {
         titulo: dados.titulo,
         descricao: dados.descricao,
         conteudo: dados.conteudo,
-        data: dataDoRegistro, // <--- Aqui o campo do banco recebe o valor
-        paciente: { 
-          connect: { id: dados.idPaciente } 
-        }
+        data: new Date(dados.data), // Colocamos o 'new Date' direto aqui
+        pacienteId: dados.idPaciente // Usamos a referência direta da chave estrangeira
       }
     });
   } catch (error) {
