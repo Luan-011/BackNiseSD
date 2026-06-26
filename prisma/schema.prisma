@@ -22,7 +22,11 @@ model Diario {
   titulo      String
   descricao   String   @db.Text
   conteudo    String
-  dataRegistro DateTime // APENAS ESTE NOME
+
+  // O @map("data") diz ao banco: "seu nome é data", 
+  // mas no código nós chamaremos de dataRegistro.
+  dataRegistro DateTime @map("data") 
+  
   feedbackIA  String?
   
   pacienteId  String
