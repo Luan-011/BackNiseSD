@@ -10,7 +10,23 @@ export class IaService {
     @Inject(forwardRef(() => DiarioService))
     private readonly diarioService: DiarioService
   ) {}
+async gerarFeedbackDiario(conteudo: string) {
+  try {
+    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const prompt = `Analise este relato de diário e forneça um retorno acolhedor: ${conteudo}. Retorne em um formato JSON com as chaves: mensagem, emocao_predominante, gatilhos_provaveis (array), dicas_de_manejo (array).`;
 
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text();
+    
+    // Limpa o texto da IA caso ele venha com marcações de markdown ```json
+    const cleanedText = responseText.replace(/```json|```/g, '').trim();
+    return JSON.parse(cleanedText);
+    
+  } catch (error) {
+    console.error("Erro na chamada da IA:", error);
+    return null; // Retorna null para o Diário saber que não conseguiu gerar
+  }
+}
   async gerarResumoSemanal(idPaciente: string) {
     try {
       // Estrutura otimizada para leitura rápida e engajamento do usuário
