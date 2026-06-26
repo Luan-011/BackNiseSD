@@ -43,6 +43,32 @@ export class DiarioService {
     const dias = diarios.map((d) => d.dataRegistro.getDate());
     return [...new Set(dias)];
   }
+  async getFeedbackPorData(idPaciente: string, dataBusca: string) {
+    // Convertendo a string "YYYY-MM-DD" para um objeto Date real
+    const dataInicio = new Date(dataBusca);
+    dataInicio.setUTCHours(0, 0, 0, 0);
+    
+    const dataFim = new Date(dataBusca);
+    dataFim.setUTCHours(23, 59, 59, 999);
+
+    const diario = await this.prisma.diario.findFirst({
+      where: {
+        pacienteId: idPaciente,
+        dataRegistro: {
+          gte: dataInicio,
+          lte: dataFim,
+        },
+      },
+      select: {
+        feedbackIA: true,
+      },
+    });
+
+    // Retorna o feedback, ou uma mensagem padrão se estiver vazio
+    return { 
+      feedbackIA: diario?.feedbackIA || "Nenhum feedback gerado para este dia ainda." 
+    };
+  }
   async criarDiario(dados: any) {
     return await this.prisma.diario.create({
       data: {
