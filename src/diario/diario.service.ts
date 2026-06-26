@@ -20,7 +20,26 @@ export class DiarioService {
       },
     });
   }
+async getDiasComRegistro(idPaciente: string, ano: string, mes: string) {
+    const dataInicio = new Date(`${ano}-${mes}-01T00:00:00Z`);
+    const dataFim = new Date(parseInt(ano), parseInt(mes), 0);
 
+    const diarios = await this.prisma.diario.findMany({
+      where: {
+        pacienteId: idPaciente,
+        dataRegistro: {
+          gte: dataInicio,
+          lte: dataFim,
+        },
+      },
+      select: {
+        dataRegistro: true,
+      },
+    });
+
+    // Retorna apenas o dia (número) de cada registro
+    return diarios.map((d) => d.dataRegistro.getDate());
+  }
 async criarDiario(dados: any) {
     return await this.prisma.diario.create({
       data: {

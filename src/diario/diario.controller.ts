@@ -3,16 +3,27 @@ import { DiarioService } from "./diario.service";
 
 @Controller("diarios")
 export class DiarioController {
-  constructor(private readonly diarioService: DiarioService) {} // Adicionei 'readonly' (boa prática)
+  constructor(private readonly diarioService: DiarioService) {}
 
   @Post() 
   async criarDiario(@Body() criarDiarioDto: any) {
     return this.diarioService.criarDiario(criarDiarioDto);
   }
 
+  // Corrigido: usando @Param para capturar o ID da URL
   @Get("lista/:idPaciente")
-  async getDiarios(@Param("idPaciente") idPaciente: string) {
-    // Adicione o 'await' caso o método no service seja 'async'
-    return await this.diarioService.getDiarios(idPaciente); 
+  async getDiarios(@Param('idPaciente') idPaciente: string) {
+    return await this.diarioService.getDiarios(idPaciente);
+  }
+
+  // Adicionado: Rota que o seu App está procurando (404)
+  @Get(":idPaciente/calendario/:ano/:mes")
+  async getCalendario(
+    @Param('idPaciente') idPaciente: string,
+    @Param('ano') ano: string,
+    @Param('mes') mes: string,
+  ) {
+    // Você precisará implementar o método 'getDiasComRegistro' no seu DiarioService
+    return await this.diarioService.getDiasComRegistro(idPaciente, ano, mes);
   }
 }
