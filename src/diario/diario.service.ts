@@ -18,21 +18,25 @@ export class DiarioService {
   }
 
   async criarDiario(dados: any) {
-    try {
-      return await this.prisma.diario.create({
-        data: {
-          titulo: dados.titulo,
-          descricao: dados.descricao,
-          conteudo: dados.conteudo,
-          data: new Date(dados.data), // O Prisma precisa receber um objeto Date real
-          paciente: {
-            connect: { id: dados.idPaciente }
-          }
+  try {
+    // 1. Extraímos a data e convertemos para o objeto Date do JS
+    const dataDoRegistro = new Date(dados.data);
+
+    // 2. Usamos o nome correto para o campo no banco (dataDoRegistro)
+    return await this.prisma.diario.create({
+      data: {
+        titulo: dados.titulo,
+        descricao: dados.descricao,
+        conteudo: dados.conteudo,
+        data: dataDoRegistro, // <--- Aqui o campo do banco recebe o valor
+        paciente: { 
+          connect: { id: dados.idPaciente } 
         }
-      });
-    } catch (error) {
-      console.error("Erro completo do Prisma:", error);
-      throw new Error("Erro ao criar entrada no diário.");
-    }
+      }
+    });
+  } catch (error) {
+    console.error("Erro completo do Prisma:", error);
+    throw new Error("Erro ao criar entrada no diário.");
   }
+}
 }
