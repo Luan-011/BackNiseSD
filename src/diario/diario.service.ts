@@ -43,39 +43,53 @@ export class DiarioService {
     const dias = diarios.map((d) => d.dataRegistro.getDate());
     return [...new Set(dias)];
   }
-async getFeedbackPorData(idPaciente: string, dataBusca: string) {    // Convertendo a string "YYYY-MM-DD" para um objeto Date real
+  // No seu DiarioService.ts, dentro do método getFeedbackPorData:
+  async getFeedbackPorData(idPaciente: string, dataBusca: string) {
     const dataInicio = new Date(dataBusca);
     dataInicio.setUTCHours(0, 0, 0, 0);
-    
     const dataFim = new Date(dataBusca);
     dataFim.setUTCHours(23, 59, 59, 999);
 
     const diario = await this.prisma.diario.findFirst({
       where: {
         pacienteId: idPaciente,
-        dataRegistro: {
-          gte: dataInicio,
-          lte: dataFim,
-        },
+        dataRegistro: { gte: dataInicio, lte: dataFim },
       },
-      select: {
-        feedbackIA: true,
-      },
+      select: { feedbackIA: true },
     });
 
-    // Retorna o feedback, ou uma mensagem padrão se estiver vazio
-return { 
-      feedbackIA: diario?.feedbackIA || "Nenhum feedback gerado para este dia." 
+    // Se tiver feedback, retorna o objeto, se não, uma mensagem padrão
+    return {
+      feedbackIA: diario?.feedbackIA ? JSON.parse(diario.feedbackIA) : { mensagem: "Nenhum feedback gerado." }
     };
-  }  async criarDiario(dados: any) {
-    return await this.prisma.diario.create({
+
+  }
+
+
+  async criarDiario(dados: any) {
+    const novoDiario = await this.prisma.diario.create({
       data: {
         titulo: dados.titulo,
         descricao: dados.descricao,
         conteudo: dados.conteudo,
-        dataRegistro: new Date(dados.data), // Agora usando o novo nome mapeado
+        dataRegistro: new Date(dados.data),
         pacienteId: dados.idPaciente
       }
     });
+
+    // Chama a IA e salva o resultado
+    try {
+      const feedbackObj = await this.iaService.gerarFeedbackDiario(dados.conteudo);
+      if (feedbackObj) {
+        await this.prisma.diario.update({
+          where: { id: novoDiario.id },
+          data: { feedbackIA: JSON.stringify(feedbackObj) } // Salva como string JSON
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao salvar feedback da IA:", error);
+    }
+
+    return novoDiario;
   }
 }

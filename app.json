@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "1d3ea0fd-0fe4-4d1f-80fe-d0e85031c52d"
+      }
+    },
+    "android": {
+      "package": "com.luan011.backend"
+    }
+  }
+}
