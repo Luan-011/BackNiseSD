@@ -18,28 +18,27 @@ constructor(
     this.genAI = new GoogleGenerativeAI(apiKey || "");
 }
 
-  async gerarFeedbackDiario(conteudo: string) {
-    try {
-      // Usando o prefixo 'models/' e o modelo gemini-1.5-pro que é mais estável
-      // Se o flash der erro, use este:
-      const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+async gerarFeedbackDiario(conteudo: string) {
+  try {
+    // 1. Tente usar 'gemini-1.5-flash' sem o prefixo 'models/'
+    // 2. Se falhar, é porque a biblioteca está forçando v1beta e o modelo não existe lá
+    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const prompt = `Analise este relato de diário e forneça um retorno acolhedor: ${conteudo}. 
+    Retorne em um formato JSON puro (sem markdown ou blocos de código), contendo as chaves: 
+    mensagem, emocao_predominante, gatilhos_provaveis (array), dicas_de_manejo (array).`;
 
-      const prompt = `Analise este relato de diário e forneça um retorno acolhedor: ${conteudo}. 
-      Retorne em um formato JSON puro (sem markdown ou blocos de código), contendo as chaves: 
-      mensagem, emocao_predominante, gatilhos_provaveis (array), dicas_de_manejo (array).`;
-
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
-
-      // Remove possíveis marcações de markdown mesmo assim
-      const cleanedText = responseText.replace(/```json|```/g, '').trim();
-      return JSON.parse(cleanedText);
-
-    } catch (error) {
-      console.error("Erro detalhado na chamada da IA:", error);
-      return null;
-    }
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text();
+    
+    const cleanedText = responseText.replace(/```json|```/g, '').trim();
+    return JSON.parse(cleanedText);
+    
+  } catch (error) {
+    console.error("ERRO NO IA.SERVICE:", error.message);
+    return null;
   }
+}
   async gerarResumoSemanal(idPaciente: string) {
     try {
       // Estrutura otimizada para leitura rápida e engajamento do usuário
