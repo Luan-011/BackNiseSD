@@ -44,7 +44,7 @@ export class DiarioService {
     return [...new Set(dias)];
   }
   // No seu DiarioService.ts, dentro do método getFeedbackPorData:
-  async getFeedbackPorData(idPaciente: string, dataBusca: string) {
+async getFeedbackPorData(idPaciente: string, dataBusca: string) {
     const dataInicio = new Date(dataBusca);
     dataInicio.setUTCHours(0, 0, 0, 0);
     const dataFim = new Date(dataBusca);
@@ -58,12 +58,23 @@ export class DiarioService {
       select: { feedbackIA: true },
     });
 
-    // Se tiver feedback, retorna o objeto, se não, uma mensagem padrão
-    return {
-      feedbackIA: diario?.feedbackIA ? JSON.parse(diario.feedbackIA) : { mensagem: "Nenhum feedback gerado." }
-    };
+    // Se o feedback estiver vazio ou nulo, retorne um objeto padrão seguro
+    if (!diario || !diario.feedbackIA) {
+      return { 
+        feedbackIA: { 
+          mensagem: "Nenhum feedback gerado para este dia.", 
+          dicas_de_manejo: [] 
+        } 
+      };
+    }
 
-  }
+    // Se tiver conteúdo, tenta fazer o parse
+    try {
+      return { feedbackIA: JSON.parse(diario.feedbackIA) };
+    } catch (e) {
+      return { feedbackIA: { mensagem: diario.feedbackIA, dicas_de_manejo: [] } };
+    }
+}
 
 
   async criarDiario(dados: any) {
