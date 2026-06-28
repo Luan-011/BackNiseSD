@@ -6,14 +6,17 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 export class IaService {
   private genAI: GoogleGenerativeAI;
 
-  constructor(
+// No seu IaService.ts
+constructor(
     @Inject(forwardRef(() => DiarioService))
     private readonly diarioService: DiarioService
-  ) {
-    // Garante que a chave existe e não tem espaços extras
-    const apiKey = process.env.GEMINI_API_KEY?.trim() || "";
-    this.genAI = new GoogleGenerativeAI(apiKey);
-  }
+) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        console.error("ERRO: A chave GEMINI_API_KEY não foi carregada pelo servidor!");
+    }
+    this.genAI = new GoogleGenerativeAI(apiKey || "");
+}
 
   async gerarFeedbackDiario(conteudo: string) {
     try {
