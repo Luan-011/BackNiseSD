@@ -77,17 +77,21 @@ export class DiarioService {
       }
     });
 
-    // Chama a IA e salva o resultado
     try {
+      console.log("Chamando IA para o diário:", novoDiario.id);
       const feedbackObj = await this.iaService.gerarFeedbackDiario(dados.conteudo);
+
       if (feedbackObj) {
+        console.log("IA gerou feedback com sucesso!");
         await this.prisma.diario.update({
           where: { id: novoDiario.id },
-          data: { feedbackIA: JSON.stringify(feedbackObj) } // Salva como string JSON
+          data: { feedbackIA: JSON.stringify(feedbackObj) }
         });
+      } else {
+        console.log("IA retornou nulo!");
       }
     } catch (error) {
-      console.error("Erro ao salvar feedback da IA:", error);
+      console.error("ERRO CRÍTICO NA IA:", error);
     }
 
     return novoDiario;
