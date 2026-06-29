@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Inject, forwardRef } from "@nestjs/common";
 import { VertexAI } from "@google-cloud/vertexai";
 
 @Injectable()
@@ -6,11 +6,16 @@ export class IaService {
   private generativeModel: any;
 
   constructor() {
-    // O VertexAI vai buscar a autenticação automaticamente do seu ambiente
-    // Ele NÃO espera uma string de chave, ele espera o ambiente autenticado
+    // Carrega o JSON da variável de ambiente, se existir
+    const credentials = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON 
+      ? JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) 
+      : null;
+
     const vertexAI = new VertexAI({
-      project: 'nome-do-seu-projeto-aqui', // Coloque exatamente o ID do projeto que você criou
-      location: 'us-central1'
+      project: 'nisesd', // Ou o ID do seu projeto novo
+      location: 'us-central1',
+      // Passamos as credenciais explicitamente
+      googleAuthOptions: credentials ? { credentials } : {}
     });
 
     this.generativeModel = vertexAI.getGenerativeModel({

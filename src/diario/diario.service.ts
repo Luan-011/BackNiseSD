@@ -124,7 +124,13 @@ export class DiarioService {
 
     const conteudo = diarios.map(d => d.descricao).join("\n");
 
-    // Agora chamamos a IA passando o texto pronto
-    return await this.iaService.gerarResumoSemanal(conteudo);
+    // Adicione este bloco try/catch e a checagem de nulo
+    try {
+      const resumo = await this.iaService.gerarResumoSemanal(conteudo);
+      return resumo || "Não foi possível gerar o resumo neste momento.";
+    } catch (error) {
+      console.error("Erro ao chamar gerarResumoSemanal:", error);
+      return "Erro ao processar resumo pela IA.";
+    }
   }
 }
