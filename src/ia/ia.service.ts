@@ -16,23 +16,31 @@ export class IaService {
     });
   }
 
-  async gerarFeedbackDiario(conteudo: string) {
+async gerarFeedbackDiario(conteudo: string) {
     try {
       const completion = await this.openai.chat.completions.create({
-        messages: [{
-          role: "user",
-          content: `Analise este relato de diário e retorne APENAS um objeto JSON com as chaves: "mensagem", "emocao_predominante", "gatilhos_provaveis" (array) e "dicas_de_manejo" (array). Relato: ${conteudo}`
+        messages: [{ 
+          role: "user", 
+          content: `Analise este relato de diário e retorne APENAS um objeto JSON com as chaves: "mensagem", "emocao_predominante", "gatilhos_provaveis" (array) e "dicas_de_manejo" (array). Não use markdown, apenas o JSON puro. Relato: ${conteudo}` 
         }],
-        model: "llama-3.3-70b-versatile", // <--- TROQUE AQUI        response_format: { type: "json_object" }
+        model: "llama-3.3-70b-versatile",
+        response_format: { type: "json_object" }
       });
 
-      return JSON.parse(completion.choices[0].message.content || "{}");
+      let rawContent = completion.choices[0].message.content || "{}";
+      
+      // Limpeza robusta: remove qualquer coisa que não seja o JSON
+      const cleanJson = rawContent
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+
+      return JSON.parse(cleanJson);
     } catch (error) {
-      console.error("Erro ao chamar o Groq:", error);
+      console.error("Erro ao processar JSON da IA:", error);
       return null;
     }
-  }
-//askjdkadhd
+  }//askjdkadhd
   async gerarResumoSemanal(conteudo: string) {
     try {
       const completion = await this.openai.chat.completions.create({
