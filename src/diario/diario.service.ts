@@ -79,7 +79,7 @@ export class DiarioService {
     return await this.iaService.gerarResumoSemanal(textos);
   }
 
-  async getFeedbackPorData(pacienteId: string, data: string) {
+async getFeedbackPorData(pacienteId: string, data: string) {
     const inicioDoDia = new Date(data);
     inicioDoDia.setUTCHours(0, 0, 0, 0);
     const fimDoDia = new Date(data);
@@ -93,6 +93,14 @@ export class DiarioService {
     });
 
     if (!diario || !diario.feedbackIA) return null;
-    return typeof diario.feedbackIA === 'string' ? JSON.parse(diario.feedbackIA) : diario.feedbackIA;
+
+    // Garante que o retorno seja um objeto limpo para o front
+    try {
+      return typeof diario.feedbackIA === 'string' 
+        ? JSON.parse(diario.feedbackIA) 
+        : diario.feedbackIA;
+    } catch (e) {
+      return { mensagem: "Erro ao processar feedback." };
+    }
   }
 }
