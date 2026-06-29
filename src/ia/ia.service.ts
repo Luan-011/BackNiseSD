@@ -32,7 +32,7 @@ export class IaService {
       return null;
     }
   }
-
+//askjdkadhd
   async gerarResumoSemanal(conteudo: string) {
     try {
       const completion = await this.openai.chat.completions.create({
