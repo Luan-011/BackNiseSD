@@ -1,64 +1,47 @@
-import { Injectable, Inject, forwardRef } from "@nestjs/common";
-import { DiarioService } from "../diario/diario.service";
-import { VertexAI } from '@google-cloud/vertexai';
+import { Injectable } from "@nestjs/common";
+import { VertexAI } from "@google-cloud/vertexai";
 
 @Injectable()
 export class IaService {
-  private vertexAI: VertexAI;
+  private generativeModel: any;
 
-  constructor(
-    @Inject(forwardRef(() => DiarioService))
-    private readonly diarioService: DiarioService
-  ) {
-    // Carrega o JSON da variável de ambiente do Render
-    const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || "{}");
+  constructor() {
+    // O VertexAI vai buscar a autenticação automaticamente do seu ambiente
+    // Ele NÃO espera uma string de chave, ele espera o ambiente autenticado
+    const vertexAI = new VertexAI({
+      project: 'nome-do-seu-projeto-aqui', // Coloque exatamente o ID do projeto que você criou
+      location: 'us-central1'
+    });
 
-    this.vertexAI = new VertexAI({
-      project: credentials.project_id || 'SEU_ID_DO_PROJETO',
-      location: 'us-central1',
-      googleAuthOptions: { credentials }
+    this.generativeModel = vertexAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
     });
   }
 
   async gerarFeedbackDiario(conteudo: string) {
     try {
-      const generativeModel = this.vertexAI.getGenerativeModel({
-        model: 'gemini-1.5-flash',
+      const response = await this.generativeModel.generateContent({
+        contents: [{ role: 'user', parts: [{ text: conteudo }] }],
       });
-
-      const prompt = `Analise este relato de diário e forneça um retorno acolhedor: ${conteudo}. 
-      Retorne APENAS um JSON (sem texto explicativo, sem markdown), com estas chaves: 
-      "mensagem", "emocao_predominante", "gatilhos_provaveis" (array), "dicas_de_manejo" (array).`;
-
-      const response = await generativeModel.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      });
-
-      const text = response.response.candidates[0].content.parts[0].text;
-
-      // Limpeza de segurança para garantir que o retorno seja um JSON puro
-      const cleanedText = text.replace(/```json|```/g, '').trim();
-      return JSON.parse(cleanedText);
-
+      return JSON.parse(response.response.candidates[0].content.parts[0].text);
     } catch (error) {
-      console.error("ERRO FINAL NO IA.SERVICE:", error.message);
+      console.error("Erro na Vertex AI:", error);
       return null;
     }
   }
-  // Adicione este método no src/ia/ia.service.ts
-  async gerarResumoSemanal(conteudo: string) {
-    try {
-      const generativeModel = this.vertexAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      const prompt = `Analise estes relatos da semana e forneça um resumo acolhedor: ${conteudo}.`;
-
-      const response = await generativeModel.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      });
-
-      return response.response.candidates[0].content.parts[0].text;
-    } catch (error) {
-      console.error("Erro no resumo:", error.message);
-      return null;
-    }
+  // No seu src/ia/ia.service.ts
+async gerarResumoSemanal(conteudo: string) {
+  try {
+    // Verifique se 'this.generativeModel' foi inicializado corretamente no construtor
+    const response = await this.generativeModel.generateContent({
+      contents: [{ role: 'user', parts: [{ text: `Resuma estes relatos: ${conteudo}` }] }],
+    });
+    
+    // Verifique se a resposta contém os campos antes de acessar
+    return response?.response?.candidates?.[0]?.content?.parts?.[0]?.text || "Sem conteúdo";
+  } catch (error) {
+    console.error("Erro no resumo:", error);
+    return null; // Isso fará o catch no DiarioService capturar e retornar a mensagem segura
   }
+}
 }
