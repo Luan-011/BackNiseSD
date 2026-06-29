@@ -3,7 +3,7 @@ import { DiarioService } from "./diario.service";
 
 @Controller("diarios")
 export class DiarioController {
-  constructor(private readonly diarioService: DiarioService) {}
+  constructor(private readonly diarioService: DiarioService) { }
 
   @Post()
   async criar(@Body() body: { pacienteId: string, conteudo: string, titulo: string, descricao: string }) {
