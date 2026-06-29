@@ -95,6 +95,46 @@ export class DiarioService {
     }
     return diario;
   }
+
+async forcarRegistroManual(pacienteId: string, dataISO: string, conteudo: string) {
+  // Ajuste para pegar o início e fim do dia (para o findFirst funcionar)
+  const dataRef = new Date(dataISO);
+  const inicio = new Date(dataRef.setUTCHours(0, 0, 0, 0));
+  const fim = new Date(dataRef.setUTCHours(23, 59, 59, 999));
+
+  // Tenta encontrar um diário com esse paciente e nessa data
+  const existente = await this.prisma.diario.findFirst({
+    where: { 
+      pacienteId: pacienteId,
+      dataRegistro: { 
+        gte: inicio, 
+        lte: fim 
+      } 
+    }
+  });
+
+  if (existente) {
+    // Atualiza o existente (usando os nomes do seu schema)
+    return await this.prisma.diario.update({
+      where: { id: existente.id },
+      data: { 
+        conteudo: conteudo,
+        // Caso queira atualizar o titulo ou descricao também, pode adicionar aqui
+      }
+    });
+  } else {
+    // Cria um novo (usando os nomes do seu schema)
+    return await this.prisma.diario.create({
+      data: {
+        pacienteId: pacienteId,
+        dataRegistro: inicio, // O Prisma cuida do @map("data") sozinho
+        conteudo: conteudo,
+        titulo: "Relato Diário", // Campo obrigatório no seu schema
+        descricao: "Relato inserido manualmente" // Campo obrigatório no seu schema
+      }
+    });
+  }
+}
   async getFeedbackPorData(pacienteId: string, data: string) {
     // Garante que a data seja processada como início e fim do dia em UTC
     // A string 'data' deve chegar no formato 'YYYY-MM-DD'
