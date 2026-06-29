@@ -1,136 +1,89 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { IaService } from '../ia/ia.service';
+import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { IaService } from "../ia/ia.service";
 
 @Injectable()
 export class DiarioService {
   constructor(
     private prisma: PrismaService,
-    @Inject(forwardRef(() => IaService))
-    private readonly iaService: IaService
-  ) { }
+    private iaService: IaService
+  ) {}
 
-  async getDiarios(idPaciente: string) {
-    return await this.prisma.diario.findMany({
-      where: {
-        pacienteId: idPaciente,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-  }
-  async getDiasComRegistro(idPaciente: string, ano: string, mes: string) {
-    // Ajuste: pegamos o primeiro dia do mês e o último dia do mês de forma segura
-    const mesNumero = parseInt(mes) - 1; // Meses no JS vão de 0 a 11
-    const dataInicio = new Date(parseInt(ano), mesNumero, 1);
-    const dataFim = new Date(parseInt(ano), mesNumero + 1, 0, 23, 59, 59);
-
-    const diarios = await this.prisma.diario.findMany({
-      where: {
-        pacienteId: idPaciente,
-        dataRegistro: {
-          gte: dataInicio,
-          lte: dataFim,
-        },
-      },
-      select: {
-        dataRegistro: true,
-      },
-    });
-
-    // Retorna um array único de dias para evitar duplicatas
-    const dias = diarios.map((d) => d.dataRegistro.getDate());
-    return [...new Set(dias)];
-  }
-  // No seu DiarioService.ts, dentro do método getFeedbackPorData:
-  async getFeedbackPorData(idPaciente: string, dataBusca: string) {
-    const dataInicio = new Date(dataBusca);
-    dataInicio.setUTCHours(0, 0, 0, 0);
-    const dataFim = new Date(dataBusca);
-    dataFim.setUTCHours(23, 59, 59, 999);
-
-    const diario = await this.prisma.diario.findFirst({
-      where: {
-        pacienteId: idPaciente,
-        dataRegistro: { gte: dataInicio, lte: dataFim },
-      },
-      select: { feedbackIA: true },
-    });
-
-    // Se o feedback estiver vazio ou nulo, retorne um objeto padrão seguro
-    if (!diario || !diario.feedbackIA) {
-      return {
-        feedbackIA: {
-          mensagem: "Nenhum feedback gerado para este dia.",
-          dicas_de_manejo: []
-        }
-      };
-    }
-
-    // Se tiver conteúdo, tenta fazer o parse
-    try {
-      return { feedbackIA: JSON.parse(diario.feedbackIA) };
-    } catch (e) {
-      return { feedbackIA: { mensagem: diario.feedbackIA, dicas_de_manejo: [] } };
-    }
-  }
-
-
-  async criarDiario(dados: any) {
+  async criarDiario(pacienteId: string, conteudo: string, titulo: string, descricao: string) {
     const novoDiario = await this.prisma.diario.create({
-      data: {
-        titulo: dados.titulo,
-        descricao: dados.descricao,
-        conteudo: dados.conteudo,
-        dataRegistro: new Date(dados.data),
-        pacienteId: dados.idPaciente
-      }
+      data: { pacienteId, conteudo, titulo, descricao, dataRegistro: new Date() }
     });
 
-    try {
-      console.log("Chamando IA para o diário:", novoDiario.id);
-      const feedbackObj = await this.iaService.gerarFeedbackDiario(dados.conteudo);
+    const feedbackJson = await this.iaService.gerarFeedbackDiario(conteudo);
 
-      if (feedbackObj) {
-        console.log("IA gerou feedback com sucesso!");
-        await this.prisma.diario.update({
-          where: { id: novoDiario.id },
-          data: { feedbackIA: JSON.stringify(feedbackObj) }
-        });
-      } else {
-        console.log("IA retornou nulo!");
-      }
-    } catch (error) {
-      console.error("ERRO CRÍTICO NA IA:", error);
+    if (feedbackJson) {
+      await this.prisma.diario.update({
+        where: { id: novoDiario.id },
+        data: { feedbackIA: feedbackJson }
+      });
     }
 
     return novoDiario;
   }
-  // Adicione este método no src/diario/diario.service.ts
-  async getResumoSemanal(idPaciente: string) {
+
+  // MÉTODO NOVO: Lista todos os diários
+  async getDiarios(pacienteId: string) {
+    return await this.prisma.diario.findMany({
+      where: { pacienteId },
+      orderBy: { dataRegistro: 'desc' }
+    });
+  }
+
+  // MÉTODO NOVO: Busca dias com registro
+  async getDiasComRegistro(pacienteId: string, ano: string, mes: string) {
+    const start = new Date(parseInt(ano), parseInt(mes) - 1, 1);
+    const end = new Date(parseInt(ano), parseInt(mes), 0, 23, 59, 59);
+
+    const registros = await this.prisma.diario.findMany({
+      where: {
+        pacienteId,
+        dataRegistro: { gte: start, lte: end }
+      },
+      select: { dataRegistro: true }
+    });
+
+    // Retorna apenas os dias (ex: [1, 5, 10])
+    return registros.map(r => r.dataRegistro.getDate());
+  }
+
+  // MÉTODO CORRIGIDO: O que o IaController chama
+  async getResumoSemanal(pacienteId: string) {
     const seteDiasAtras = new Date();
     seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
 
-    const diarios = await this.prisma.diario.findMany({
+    const relatos = await this.prisma.diario.findMany({
       where: {
-        pacienteId: idPaciente,
-        dataRegistro: { gte: seteDiasAtras },
+        pacienteId,
+        dataRegistro: { gte: seteDiasAtras }
       },
-      orderBy: { dataRegistro: 'desc' },
+      select: { conteudo: true }
     });
 
-    if (diarios.length === 0) return "Nenhum registro encontrado nesta semana.";
+    const textos = relatos.map(r => r.conteudo).join("\n\n");
+    
+    // Verifique se IaService tem este método!
+    return await this.iaService.gerarResumoSemanal(textos);
+  }
 
-    const conteudo = diarios.map(d => d.descricao).join("\n");
+  async getFeedbackPorData(pacienteId: string, data: string) {
+    const inicioDoDia = new Date(data);
+    inicioDoDia.setUTCHours(0,0,0,0);
+    const fimDoDia = new Date(data);
+    fimDoDia.setUTCHours(23,59,59,999);
 
-    // Adicione este bloco try/catch e a checagem de nulo
-    try {
-      const resumo = await this.iaService.gerarResumoSemanal(conteudo);
-      return resumo || "Não foi possível gerar o resumo neste momento.";
-    } catch (error) {
-      console.error("Erro ao chamar gerarResumoSemanal:", error);
-      return "Erro ao processar resumo pela IA.";
-    }
+    const diario = await this.prisma.diario.findFirst({
+      where: {
+        pacienteId,
+        dataRegistro: { gte: inicioDoDia, lte: fimDoDia }
+      }
+    });
+
+    if (!diario || !diario.feedbackIA) return null;
+    return typeof diario.feedbackIA === 'string' ? JSON.parse(diario.feedbackIA) : diario.feedbackIA;
   }
 }
