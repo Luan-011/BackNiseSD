@@ -1,12 +1,12 @@
 import { Controller, Get, Param } from '@nestjs/common';
-import { IaService } from './ia.service';
+import { DiarioService } from '../diario/diario.service'; // Importe o DiarioService
 
 @Controller('ia')
 export class IaController {
-  constructor(private readonly iaService: IaService) {}
+  constructor(private readonly diarioService: DiarioService) {} // Injete o DiarioService
 
   @Get('resumo/:idPaciente')
   async getResumo(@Param('idPaciente') idPaciente: string) {
-    return await this.iaService.gerarResumoSemanal(idPaciente);
+    return await this.diarioService.getResumoSemanal(idPaciente);
   }
 }

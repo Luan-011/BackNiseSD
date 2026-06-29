@@ -12,11 +12,11 @@ export class IaService {
   ) {
     // Carrega o JSON da variável de ambiente do Render
     const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || "{}");
-    
-    this.vertexAI = new VertexAI({ 
-      project: credentials.project_id || 'SEU_ID_DO_PROJETO', 
+
+    this.vertexAI = new VertexAI({
+      project: credentials.project_id || 'SEU_ID_DO_PROJETO',
       location: 'us-central1',
-      googleAuthOptions: { credentials } 
+      googleAuthOptions: { credentials }
     });
   }
 
@@ -35,13 +35,29 @@ export class IaService {
       });
 
       const text = response.response.candidates[0].content.parts[0].text;
-      
+
       // Limpeza de segurança para garantir que o retorno seja um JSON puro
       const cleanedText = text.replace(/```json|```/g, '').trim();
       return JSON.parse(cleanedText);
-      
+
     } catch (error) {
       console.error("ERRO FINAL NO IA.SERVICE:", error.message);
+      return null;
+    }
+  }
+  // Adicione este método no src/ia/ia.service.ts
+  async gerarResumoSemanal(conteudo: string) {
+    try {
+      const generativeModel = this.vertexAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const prompt = `Analise estes relatos da semana e forneça um resumo acolhedor: ${conteudo}.`;
+
+      const response = await generativeModel.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      });
+
+      return response.response.candidates[0].content.parts[0].text;
+    } catch (error) {
+      console.error("Erro no resumo:", error.message);
       return null;
     }
   }

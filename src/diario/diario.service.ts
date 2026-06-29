@@ -44,7 +44,7 @@ export class DiarioService {
     return [...new Set(dias)];
   }
   // No seu DiarioService.ts, dentro do método getFeedbackPorData:
-async getFeedbackPorData(idPaciente: string, dataBusca: string) {
+  async getFeedbackPorData(idPaciente: string, dataBusca: string) {
     const dataInicio = new Date(dataBusca);
     dataInicio.setUTCHours(0, 0, 0, 0);
     const dataFim = new Date(dataBusca);
@@ -60,11 +60,11 @@ async getFeedbackPorData(idPaciente: string, dataBusca: string) {
 
     // Se o feedback estiver vazio ou nulo, retorne um objeto padrão seguro
     if (!diario || !diario.feedbackIA) {
-      return { 
-        feedbackIA: { 
-          mensagem: "Nenhum feedback gerado para este dia.", 
-          dicas_de_manejo: [] 
-        } 
+      return {
+        feedbackIA: {
+          mensagem: "Nenhum feedback gerado para este dia.",
+          dicas_de_manejo: []
+        }
       };
     }
 
@@ -74,7 +74,7 @@ async getFeedbackPorData(idPaciente: string, dataBusca: string) {
     } catch (e) {
       return { feedbackIA: { mensagem: diario.feedbackIA, dicas_de_manejo: [] } };
     }
-}
+  }
 
 
   async criarDiario(dados: any) {
@@ -106,5 +106,25 @@ async getFeedbackPorData(idPaciente: string, dataBusca: string) {
     }
 
     return novoDiario;
+  }
+  // Adicione este método no src/diario/diario.service.ts
+  async getResumoSemanal(idPaciente: string) {
+    const seteDiasAtras = new Date();
+    seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
+
+    const diarios = await this.prisma.diario.findMany({
+      where: {
+        pacienteId: idPaciente,
+        dataRegistro: { gte: seteDiasAtras },
+      },
+      orderBy: { dataRegistro: 'desc' },
+    });
+
+    if (diarios.length === 0) return "Nenhum registro encontrado nesta semana.";
+
+    const conteudo = diarios.map(d => d.descricao).join("\n");
+
+    // Agora chamamos a IA passando o texto pronto
+    return await this.iaService.gerarResumoSemanal(conteudo);
   }
 }
