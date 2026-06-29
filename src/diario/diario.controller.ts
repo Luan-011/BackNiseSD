@@ -9,7 +9,10 @@ export class DiarioController {
   async criar(@Body() body: { pacienteId: string, conteudo: string, titulo: string, descricao: string }) {
     return await this.diarioService.criarDiario(body.pacienteId, body.conteudo, body.titulo, body.descricao);
   }
-
+  @Post("regerar-feedback/:id")
+  async regerarFeedback(@Param('id') id: string) {
+    return await this.diarioService.gerarFeedbackManual(id);
+  }
   @Get("feedback/:data")
   async getFeedback(@Param('data') data: string) {
     return await this.diarioService.getFeedbackPorData("134fa6c0-4a7e-4dec-a29a-81081d00122e", data);

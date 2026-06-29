@@ -78,26 +78,61 @@ export class DiarioService {
     // Verifique se IaService tem este método!
     return await this.iaService.gerarResumoSemanal(textos);
   }
+  // Adicione este método na classe DiarioService
+  async gerarFeedbackManual(id: string) {
+    const diario = await this.prisma.diario.findUnique({ where: { id } });
 
+    if (!diario) throw new Error("Diário não encontrado");
+
+    // Chama a IA
+    const feedbackJson = await this.iaService.gerarFeedbackDiario(diario.conteudo);
+
+    if (feedbackJson) {
+      return await this.prisma.diario.update({
+        where: { id: id },
+        data: { feedbackIA: feedbackJson }
+      });
+    }
+    return diario;
+  }
   async getFeedbackPorData(pacienteId: string, data: string) {
-    // data vem como '2026-06-29'
+    // Garante que a data seja processada como início e fim do dia em UTC
+    // A string 'data' deve chegar no formato 'YYYY-MM-DD'
     const inicioDoDia = new Date(`${data}T00:00:00Z`);
     const fimDoDia = new Date(`${data}T23:59:59Z`);
 
     const diario = await this.prisma.diario.findFirst({
       where: {
         pacienteId,
-        dataRegistro: { gte: inicioDoDia, lte: fimDoDia }
+        dataRegistro: {
+          gte: inicioDoDia,
+          lte: fimDoDia
+        }
       }
     });
 
-    console.log("Busca no banco para", data, ":", diario ? "Encontrado" : "Não encontrado");
+    // Se não encontrar o diário, retorna null
+    if (!diario) return null;
 
-    if (!diario || !diario.feedbackIA) return null;
+    // Se o diário existe, mas não tem feedbackIA, retorna apenas o objeto do diário
+    // (para que o front-end saiba que o diário existe mas precisa de feedback)
+    if (!diario.feedbackIA) {
+      return {
+        id: diario.id,
+        feedbackIA: null
+      };
+    }
 
-    // Se for string, tenta fazer o parse, se já for objeto, retorna ele mesmo
-    return typeof diario.feedbackIA === 'string'
+    // Se o feedbackIA for uma string (salvo no banco), faz o parse para objeto
+    // Se já for objeto (dependendo da configuração do Prisma), retorna ele
+    const feedbackFormatado = typeof diario.feedbackIA === 'string'
       ? JSON.parse(diario.feedbackIA)
       : diario.feedbackIA;
+
+    // Retorna o ID junto com o objeto de feedback para que o front possa regerar se necessário
+    return {
+      id: diario.id,
+      ...feedbackFormatado
+    };
   }
 }
