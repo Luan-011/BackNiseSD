@@ -27,8 +27,7 @@ export class IaService {
         response_format: { type: "json_object" }
       });
 
-      const content = completion.choices[0].message.content;
-      return JSON.parse(content || "{}");
+      return JSON.parse(completion.choices[0].message.content || "{}");
     } catch (error) {
       console.error("Erro ao chamar o Groq:", error);
       return null;
@@ -40,7 +39,7 @@ export class IaService {
       const completion = await this.openai.chat.completions.create({
         messages: [{ 
           role: "user", 
-          content: `Resuma os seguintes relatos de diário destacando padrões de comportamento: ${conteudo}` 
+          content: `Resuma os seguintes relatos de diário: ${conteudo}` 
         }],
         model: "llama3-8b-8192"
       });
