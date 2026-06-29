@@ -1,52 +1,53 @@
 import { Injectable, Inject, forwardRef } from "@nestjs/common";
-import { VertexAI } from "@google-cloud/vertexai";
+import OpenAI from "openai";
+import { DiarioService } from "../diario/diario.service";
 
 @Injectable()
 export class IaService {
-  private generativeModel: any;
+  private openai: OpenAI;
 
-  constructor() {
-    // Carrega o JSON da variável de ambiente, se existir
-    const credentials = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON 
-      ? JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) 
-      : null;
-
-    const vertexAI = new VertexAI({
-      project: 'nisesd', // Ou o ID do seu projeto novo
-      location: 'us-central1',
-      // Passamos as credenciais explicitamente
-      googleAuthOptions: credentials ? { credentials } : {}
-    });
-
-    this.generativeModel = vertexAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+  constructor(
+    @Inject(forwardRef(() => DiarioService))
+    private readonly diarioService: DiarioService
+  ) {
+    this.openai = new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: "https://api.groq.com/openai/v1"
     });
   }
 
   async gerarFeedbackDiario(conteudo: string) {
     try {
-      const response = await this.generativeModel.generateContent({
-        contents: [{ role: 'user', parts: [{ text: conteudo }] }],
+      const completion = await this.openai.chat.completions.create({
+        messages: [{ 
+          role: "user", 
+          content: `Analise este relato de diário e retorne APENAS um objeto JSON com as chaves: "mensagem", "emocao_predominante", "gatilhos_provaveis" (array) e "dicas_de_manejo" (array). Relato: ${conteudo}` 
+        }],
+        model: "llama3-8b-8192",
+        response_format: { type: "json_object" }
       });
-      return JSON.parse(response.response.candidates[0].content.parts[0].text);
+
+      const content = completion.choices[0].message.content;
+      return JSON.parse(content || "{}");
     } catch (error) {
-      console.error("Erro na Vertex AI:", error);
+      console.error("Erro ao chamar o Groq:", error);
       return null;
     }
   }
-  // No seu src/ia/ia.service.ts
-async gerarResumoSemanal(conteudo: string) {
-  try {
-    // Verifique se 'this.generativeModel' foi inicializado corretamente no construtor
-    const response = await this.generativeModel.generateContent({
-      contents: [{ role: 'user', parts: [{ text: `Resuma estes relatos: ${conteudo}` }] }],
-    });
-    
-    // Verifique se a resposta contém os campos antes de acessar
-    return response?.response?.candidates?.[0]?.content?.parts?.[0]?.text || "Sem conteúdo";
-  } catch (error) {
-    console.error("Erro no resumo:", error);
-    return null; // Isso fará o catch no DiarioService capturar e retornar a mensagem segura
+
+  async gerarResumoSemanal(conteudo: string) {
+    try {
+      const completion = await this.openai.chat.completions.create({
+        messages: [{ 
+          role: "user", 
+          content: `Resuma os seguintes relatos de diário destacando padrões de comportamento: ${conteudo}` 
+        }],
+        model: "llama3-8b-8192"
+      });
+      return completion.choices[0].message.content;
+    } catch (error) {
+      console.error("Erro no resumo:", error);
+      return "Não foi possível gerar o resumo.";
+    }
   }
-}
 }
