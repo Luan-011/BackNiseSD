@@ -79,11 +79,10 @@ export class DiarioService {
     return await this.iaService.gerarResumoSemanal(textos);
   }
 
-async getFeedbackPorData(pacienteId: string, data: string) {
-    const inicioDoDia = new Date(data);
-    inicioDoDia.setUTCHours(0, 0, 0, 0);
-    const fimDoDia = new Date(data);
-    fimDoDia.setUTCHours(23, 59, 59, 999);
+  async getFeedbackPorData(pacienteId: string, data: string) {
+    // data vem como '2026-06-29'
+    const inicioDoDia = new Date(`${data}T00:00:00Z`);
+    const fimDoDia = new Date(`${data}T23:59:59Z`);
 
     const diario = await this.prisma.diario.findFirst({
       where: {
@@ -92,15 +91,13 @@ async getFeedbackPorData(pacienteId: string, data: string) {
       }
     });
 
+    console.log("Busca no banco para", data, ":", diario ? "Encontrado" : "Não encontrado");
+
     if (!diario || !diario.feedbackIA) return null;
 
-    // Garante que o retorno seja um objeto limpo para o front
-    try {
-      return typeof diario.feedbackIA === 'string' 
-        ? JSON.parse(diario.feedbackIA) 
-        : diario.feedbackIA;
-    } catch (e) {
-      return { mensagem: "Erro ao processar feedback." };
-    }
+    // Se for string, tenta fazer o parse, se já for objeto, retorna ele mesmo
+    return typeof diario.feedbackIA === 'string'
+      ? JSON.parse(diario.feedbackIA)
+      : diario.feedbackIA;
   }
 }
