@@ -34,16 +34,38 @@ export class IaService {
     }
   }
 
-  // MÉTODO ADICIONADO PARA CORRIGIR O ERRO
   async gerarResumoSemanal(conteudo: string): Promise<string> {
     try {
       const completion = await this.openai.chat.completions.create({
         messages: [{ 
+          role: "system", 
+          content: "Você é a Nise, uma IA de saúde mental. Responda seguindo exatamente este formato, sem introduções extras:" 
+        }, { 
           role: "user", 
-          content: `Analise os relatos a seguir e forneça um resumo dos padrões emocionais e comportamentais observados:\n\n${conteudo}` 
+          content: `Analise os relatos abaixo e crie um resumo semanal seguindo este template:
+          
+          Olá, [Nome]! Aqui está seu resumo:
+          [Análise de oscilação emocional]
+          
+          Padrões identificados
+          - Principal gatilho: ...
+          - Maior intensidade emocional: ...
+          - Melhor dia da semana: ...
+          - Dia sem registro: ...
+          
+          Recomendações
+          - [Dica 1]
+          - [Dica 2]
+          - [Dica 3]
+          
+          [Para cada dia fornecido, coloque: Data (Nome do dia) - Resumo do que aconteceu].
+          
+          Relatos fornecidos:
+          ${conteudo}` 
         }],
         model: "llama-3.3-70b-versatile"
       });
+      
       return completion.choices[0].message.content || "Não foi possível gerar o resumo.";
     } catch (error) {
       console.error("Erro na IA (Resumo):", error);
