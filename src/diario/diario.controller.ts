@@ -15,6 +15,20 @@ async forcarRegistro(@Body() body: { pacienteId: string, data: string, conteudo:
     return await this.diarioService.criarDiario(body.pacienteId, body.conteudo, body.titulo, body.descricao);
   }
 
+// Adicione isto dentro da classe DiarioController
+@Get("resumo-semanal/:pacienteId/:dataInicio/:dataFim")
+async getResumoSemanal(
+  @Param('pacienteId') pacienteId: string,
+  @Param('dataInicio') dataInicio: string, // Formato esperado: 'YYYY-MM-DD'
+  @Param('dataFim') dataFim: string,       // Formato esperado: 'YYYY-MM-DD'
+) {
+  return await this.diarioService.getResumoSemanal(
+    pacienteId, 
+    new Date(dataInicio), 
+    new Date(dataFim)
+  );
+}
+
   @Post("regerar-feedback/:id")
   async regerarFeedback(@Param('id') id: string) {
     return await this.diarioService.gerarFeedbackManual(id);

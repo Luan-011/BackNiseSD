@@ -10,32 +10,24 @@ export class DiarioService {
   ) { }
 
   async criarDiario(pacienteId: string, conteudo: string, titulo: string, descricao: string) {
-    console.log("Tentando criar com:", { pacienteId, titulo }); // Isso vai aparecer no LOG do Render!
-
     const novoDiario = await this.prisma.diario.create({
       data: { pacienteId, conteudo, titulo, descricao, dataRegistro: new Date() }
     });
 
-    console.log("Diário criado, ID:", novoDiario.id);
-
     try {
       const feedbackJson = await this.iaService.gerarFeedbackDiario(conteudo);
-      console.log("IA respondeu:", feedbackJson);
-
       if (feedbackJson) {
         await this.prisma.diario.update({
           where: { id: novoDiario.id },
           data: { feedbackIA: feedbackJson }
         });
-        console.log("Feedback salvo no banco!");
       }
     } catch (e) {
       console.error("Erro na chamada da IA:", e);
     }
-
     return novoDiario;
   }
-  // MÉTODO NOVO: Lista todos os diários
+
   async getDiarios(pacienteId: string) {
     return await this.prisma.diario.findMany({
       where: { pacienteId },
@@ -43,50 +35,50 @@ export class DiarioService {
     });
   }
 
-  // MÉTODO NOVO: Busca dias com registro
   async getDiasComRegistro(pacienteId: string, ano: string, mes: string) {
     const start = new Date(parseInt(ano), parseInt(mes) - 1, 1);
     const end = new Date(parseInt(ano), parseInt(mes), 0, 23, 59, 59);
 
     const registros = await this.prisma.diario.findMany({
-      where: {
-        pacienteId,
-        dataRegistro: { gte: start, lte: end }
-      },
+      where: { pacienteId, dataRegistro: { gte: start, lte: end } },
       select: { dataRegistro: true }
     });
 
-    // Retorna apenas os dias (ex: [1, 5, 10])
     return registros.map(r => r.dataRegistro.getDate());
   }
 
-  // MÉTODO CORRIGIDO: O que o IaController chama
-  async getResumoSemanal(pacienteId: string) {
-    const seteDiasAtras = new Date();
-    seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
-
+  // MÉTODO AJUSTADO PARA LIDAR COM DIAS SEM REGISTRO
+  async getResumoSemanal(pacienteId: string, dataInicio: Date, dataFim: Date) {
     const relatos = await this.prisma.diario.findMany({
       where: {
         pacienteId,
-        dataRegistro: { gte: seteDiasAtras }
+        dataRegistro: { gte: dataInicio, lte: dataFim }
       },
-      select: { conteudo: true }
+      orderBy: { dataRegistro: 'asc' }
     });
 
-    const textos = relatos.map(r => r.conteudo).join("\n\n");
+    // Cria um mapa de dias existentes
+    const diasExistentes = new Map(relatos.map(r => [r.dataRegistro.toISOString().split('T')[0], r]));
 
-    // Verifique se IaService tem este método!
+    // Gera o texto para a IA preenchendo os dias faltantes
+    let textos = "";
+    for (let d = new Date(dataInicio); d <= dataFim; d.setDate(d.getDate() + 1)) {
+      const dataStr = d.toISOString().split('T')[0];
+      if (diasExistentes.has(dataStr)) {
+        textos += `${dataStr}: ${diasExistentes.get(dataStr).conteudo}\n`;
+      } else {
+        textos += `${dataStr}: [Nenhum registro realizado neste dia]\n`;
+      }
+    }
+
     return await this.iaService.gerarResumoSemanal(textos);
   }
-  // Adicione este método na classe DiarioService
+
   async gerarFeedbackManual(id: string) {
     const diario = await this.prisma.diario.findUnique({ where: { id } });
-
     if (!diario) throw new Error("Diário não encontrado");
 
-    // Chama a IA
     const feedbackJson = await this.iaService.gerarFeedbackDiario(diario.conteudo);
-
     if (feedbackJson) {
       return await this.prisma.diario.update({
         where: { id: id },
@@ -96,82 +88,41 @@ export class DiarioService {
     return diario;
   }
 
-async forcarRegistroManual(pacienteId: string, dataISO: string, conteudo: string, titulo: string, descricao: string) {
-  const dataRef = new Date(dataISO);
-  const inicio = new Date(dataRef.setUTCHours(0, 0, 0, 0));
-  const fim = new Date(dataRef.setUTCHours(23, 59, 59, 999));
+  async forcarRegistroManual(pacienteId: string, dataISO: string, conteudo: string, titulo: string, descricao: string) {
+    const dataRef = new Date(dataISO);
+    const inicio = new Date(dataRef.setUTCHours(0, 0, 0, 0));
+    
+    const existente = await this.prisma.diario.findFirst({
+      where: { pacienteId, dataRegistro: { gte: inicio, lte: new Date(dataRef.setUTCHours(23, 59, 59, 999)) } }
+    });
 
-  // 1. Tenta achar se já existe um registro nesse dia
-  const existente = await this.prisma.diario.findFirst({
-    where: { 
-      pacienteId: pacienteId,
-      dataRegistro: { gte: inicio, lte: fim } 
+    if (existente) {
+      return await this.prisma.diario.update({
+        where: { id: existente.id },
+        data: { conteudo, titulo, descricao }
+      });
+    } else {
+      return await this.prisma.diario.create({
+        data: { pacienteId, dataRegistro: inicio, conteudo, titulo, descricao }
+      });
     }
-  });
-
-  if (existente) {
-    // 2. Se existe, ATUALIZA o registro existente
-    return await this.prisma.diario.update({
-      where: { id: existente.id },
-      data: { 
-        conteudo: conteudo,
-        titulo: titulo,
-        descricao: descricao
-      }
-    });
-  } else {
-    // 3. Se não existe, CRIA um novo
-    return await this.prisma.diario.create({
-      data: {
-        pacienteId: pacienteId,
-        dataRegistro: inicio,
-        conteudo: conteudo,
-        titulo: titulo,
-        descricao: descricao
-      }
-    });
   }
-}
 
-
-async getFeedbackPorData(pacienteId: string, data: string) {
-    // Garante que a data seja processada como início e fim do dia em UTC
-    // A string 'data' deve chegar no formato 'YYYY-MM-DD'
+  async getFeedbackPorData(pacienteId: string, data: string) {
     const inicioDoDia = new Date(`${data}T00:00:00Z`);
     const fimDoDia = new Date(`${data}T23:59:59Z`);
 
     const diario = await this.prisma.diario.findFirst({
-      where: {
-        pacienteId,
-        dataRegistro: {
-          gte: inicioDoDia,
-          lte: fimDoDia
-        }
-      }
+      where: { pacienteId, dataRegistro: { gte: inicioDoDia, lte: fimDoDia } }
     });
 
-    // Se não encontrar o diário, retorna null
     if (!diario) return null;
+    if (!diario.feedbackIA) return { id: diario.id, feedbackIA: null };
 
-    // Se o diário existe, mas não tem feedbackIA, retorna apenas o objeto do diário
-    // (para que o front-end saiba que o diário existe mas precisa de feedback)
-    if (!diario.feedbackIA) {
-      return {
-        id: diario.id,
-        feedbackIA: null
-      };
-    }
-
-    // Se o feedbackIA for uma string (salvo no banco), faz o parse para objeto
-    // Se já for objeto (dependendo da configuração do Prisma), retorna ele
     const feedbackFormatado = typeof diario.feedbackIA === 'string'
       ? JSON.parse(diario.feedbackIA)
       : diario.feedbackIA;
 
-    // Retorna o ID junto com o objeto de feedback para que o front possa regerar se necessário
-    return {
-      id: diario.id,
-      ...feedbackFormatado
-    };
+    return { id: diario.id, ...feedbackFormatado };
   }
 }

@@ -1,13 +1,13 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';import { PrismaService } from '../prisma/prisma.service';
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { DiarioService } from './diario.service';
 import { DiarioController } from './diario.controller';
 import { PrismaModule } from '../prisma/prisma.module';
-import { IaModule } from 'src/ia/ia.module';
+import { IaModule } from '../ia/ia.module';
 
 @Module({
   imports: [
-    forwardRef(() => IaModule) // <--- Importa o IaModule aqui
+    PrismaModule, 
+    forwardRef(() => IaModule)
   ],
   controllers: [DiarioController],
   providers: [DiarioService],
