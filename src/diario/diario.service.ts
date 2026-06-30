@@ -48,32 +48,39 @@ export class DiarioService {
   }
 
   // MÉTODO AJUSTADO PARA LIDAR COM DIAS SEM REGISTRO
-  async getResumoSemanal(pacienteId: string, dataInicio: Date, dataFim: Date) {
-    const relatos = await this.prisma.diario.findMany({
-      where: {
-        pacienteId,
-        dataRegistro: { gte: dataInicio, lte: dataFim }
-      },
-      orderBy: { dataRegistro: 'asc' }
-    });
+async getResumoSemanal(pacienteId: string, dataInicio: Date, dataFim: Date) {
+  // 1. Busca o nome do paciente
+// 1. Busca os campos do nome no banco
+const paciente = await this.prisma.paciente.findUnique({
+  where: { id: pacienteId },
+  select: { primeiroNome: true, sobreNome: true }
+});
 
-    // Cria um mapa de dias existentes
-    const diasExistentes = new Map(relatos.map(r => [r.dataRegistro.toISOString().split('T')[0], r]));
+// 2. Concatena os nomes ou usa um padrão
+const nomeUsuario = paciente 
+  ? `${paciente.primeiroNome} ${paciente.sobreNome}` 
+  : "usuário";
 
-    // Gera o texto para a IA preenchendo os dias faltantes
-    let textos = "";
-    for (let d = new Date(dataInicio); d <= dataFim; d.setDate(d.getDate() + 1)) {
-      const dataStr = d.toISOString().split('T')[0];
-      if (diasExistentes.has(dataStr)) {
-        textos += `${dataStr}: ${diasExistentes.get(dataStr).conteudo}\n`;
-      } else {
-        textos += `${dataStr}: [Nenhum registro realizado neste dia]\n`;
-      }
+  const relatos = await this.prisma.diario.findMany({
+    where: { pacienteId, dataRegistro: { gte: dataInicio, lte: dataFim } },
+    orderBy: { dataRegistro: 'asc' }
+  });
+
+  const diasExistentes = new Map(relatos.map(r => [r.dataRegistro.toISOString().split('T')[0], r]));
+
+  let textos = "";
+  for (let d = new Date(dataInicio); d <= dataFim; d.setDate(d.getDate() + 1)) {
+    const dataStr = d.toISOString().split('T')[0];
+    if (diasExistentes.has(dataStr)) {
+      textos += `${dataStr}: ${diasExistentes.get(dataStr).conteudo}\n`;
+    } else {
+      textos += `${dataStr}: [Nenhum registro realizado neste dia]\n`;
     }
-
-    return await this.iaService.gerarResumoSemanal(textos);
   }
 
+  // 2. Passa o nome para a IA
+  return await this.iaService.gerarResumoSemanal(textos, nomeUsuario);
+}
   async gerarFeedbackManual(id: string) {
     const diario = await this.prisma.diario.findUnique({ where: { id } });
     if (!diario) throw new Error("Diário não encontrado");
