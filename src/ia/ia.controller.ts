@@ -3,10 +3,15 @@ import { DiarioService } from '../diario/diario.service'; // Importe o DiarioSer
 
 @Controller('ia')
 export class IaController {
-  constructor(private readonly diarioService: DiarioService) {} // Injete o DiarioService
+  constructor(private readonly diarioService: DiarioService) { } // Injete o DiarioService
 
-  @Get('resumo/:idPaciente')
-  async getResumo(@Param('idPaciente') idPaciente: string) {
-    return await this.diarioService.getResumoSemanal(idPaciente);
+  @Get("resumo/:idPaciente/:dataInicio/:dataFim")
+  async getResumo(@Param('idPaciente') idPaciente: string, @Param('dataInicio') dataInicio: string, @Param('dataFim') dataFim: string) {
+    // Passando os 3 argumentos exigidos agora
+    return await this.diarioService.getResumoSemanal(
+      idPaciente,
+      new Date(dataInicio),
+      new Date(dataFim)
+    );
   }
 }
