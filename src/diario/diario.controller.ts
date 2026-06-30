@@ -5,11 +5,10 @@ import { DiarioService } from "./diario.service";
 export class DiarioController {
   constructor(private readonly diarioService: DiarioService) { }
 
-  @Post("forcar-registro")
-  async forcarRegistro(@Body() body: { pacienteId: string, data: string, conteudo: string }) {
-    console.log("Rota forcar-registro acessada"); // Isso vai aparecer nos logs do Render
-    return await this.diarioService.forcarRegistroManual(body.pacienteId, body.data, body.conteudo);
-  }
+@Post("forcar-registro")
+async forcarRegistro(@Body() body: { pacienteId: string, data: string, conteudo: string, titulo: string, descricao: string }) {
+  return await this.diarioService.forcarRegistroManual(body.pacienteId, body.data, body.conteudo, body.titulo, body.descricao);
+}
 
   @Post()
   async criar(@Body() body: { pacienteId: string, conteudo: string, titulo: string, descricao: string }) {

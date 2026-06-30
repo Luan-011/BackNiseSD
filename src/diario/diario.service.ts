@@ -96,46 +96,45 @@ export class DiarioService {
     return diario;
   }
 
-async forcarRegistroManual(pacienteId: string, dataISO: string, conteudo: string) {
-  // Ajuste para pegar o início e fim do dia (para o findFirst funcionar)
+async forcarRegistroManual(pacienteId: string, dataISO: string, conteudo: string, titulo: string, descricao: string) {
   const dataRef = new Date(dataISO);
   const inicio = new Date(dataRef.setUTCHours(0, 0, 0, 0));
   const fim = new Date(dataRef.setUTCHours(23, 59, 59, 999));
 
-  // Tenta encontrar um diário com esse paciente e nessa data
+  // 1. Tenta achar se já existe um registro nesse dia
   const existente = await this.prisma.diario.findFirst({
     where: { 
       pacienteId: pacienteId,
-      dataRegistro: { 
-        gte: inicio, 
-        lte: fim 
-      } 
+      dataRegistro: { gte: inicio, lte: fim } 
     }
   });
 
   if (existente) {
-    // Atualiza o existente (usando os nomes do seu schema)
+    // 2. Se existe, ATUALIZA o registro existente
     return await this.prisma.diario.update({
       where: { id: existente.id },
       data: { 
         conteudo: conteudo,
-        // Caso queira atualizar o titulo ou descricao também, pode adicionar aqui
+        titulo: titulo,
+        descricao: descricao
       }
     });
   } else {
-    // Cria um novo (usando os nomes do seu schema)
+    // 3. Se não existe, CRIA um novo
     return await this.prisma.diario.create({
       data: {
         pacienteId: pacienteId,
-        dataRegistro: inicio, // O Prisma cuida do @map("data") sozinho
+        dataRegistro: inicio,
         conteudo: conteudo,
-        titulo: "Relato Diário", // Campo obrigatório no seu schema
-        descricao: "Relato inserido manualmente" // Campo obrigatório no seu schema
+        titulo: titulo,
+        descricao: descricao
       }
     });
   }
 }
-  async getFeedbackPorData(pacienteId: string, data: string) {
+
+
+async getFeedbackPorData(pacienteId: string, data: string) {
     // Garante que a data seja processada como início e fim do dia em UTC
     // A string 'data' deve chegar no formato 'YYYY-MM-DD'
     const inicioDoDia = new Date(`${data}T00:00:00Z`);
